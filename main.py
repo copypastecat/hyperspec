@@ -19,7 +19,7 @@ sun = light_source("sun", rad_sun)
 
 this_image = image.image((1028,1028), n_sim_freqs, [concrete, water], sun)
 
-state_matrix = this_image.generate_image(1)
+state_matrix = this_image.generate_image(approx_share=1,nclusters=2)
 
 plt.imshow(state_matrix)
 plt.show()

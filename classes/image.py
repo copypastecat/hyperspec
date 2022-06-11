@@ -12,33 +12,11 @@ class image:
         self.substances = substances
         self.light_source = light_source
 
-    def generate_image(self, approx_share):
+    def generate_image(self, approx_share, nclusters):
         state_matrix = np.zeros(self.size)
-        center_x = floor(abs(np.random.rand(1))*self.size[0])
-        center_y = floor(abs(np.random.rand(1))*self.size[1])
-        lifespan = round((approx_share*min(self.size)))
-        shape = (abs(np.random.normal(1)),abs(np.random.normal(1)))
-        print((center_x,center_y))
-        
-        #generate cluster around center point
-        m = 0
-        while(lifespan > 0 ):#and center_x + m < self.size[0] and center_x - m > 0): 
-            n = 0
-            lifespan_y = lifespan - m
-            while(lifespan_y > 0 ):#and center_y + n < self.size[1] and center_y - n > 0):
-                if(center_x + m < self.size[0]):
-                    if(center_y + n < self.size[1]):
-                        state_matrix[center_x+m,center_y+n] = 1
-                if(center_x + m < self.size[0]):
-                    state_matrix[center_x+m,center_y-n] = 1
-                if(center_y + n < self.size[1]):
-                    state_matrix[center_x-m,center_y+n] = 1
-                state_matrix[center_x-m,center_y-n] = 1
-                lifespan_y = lifespan_y - 0.1*shape[0]*n*np.random.rand(1)
-                n = n + 1
-            m = m + 1
-            lifespan = lifespan - 0.1*shape[1]*m*np.random.rand(1)
-
+        for i in range(1,nclusters+1):
+           state_matrix = self.make_cluster(state_matrix,approx_share,class_val=i)
+    
         return state_matrix
 
     def display():
@@ -46,3 +24,31 @@ class image:
 
     def n_closest(x,n,d=1):
        return x[n[0]-d:n[0]+d+1,n[1]-d:n[1]+d+1]
+
+    def make_cluster(self,state_matrix, approx_share, class_val=1):
+        center_x = floor(abs(np.random.rand(1))*self.size[0])
+        center_y = floor(abs(np.random.rand(1))*self.size[1])
+        lifespan = round((approx_share*min(self.size)))
+        shape = (abs(np.random.normal(1)),abs(np.random.normal(1)))
+        print((center_x,center_y))
+        
+        #generate random ellipsiod-like cluster around center point
+        m = 0
+        while(lifespan > 0 ):#and center_x + m < self.size[0] and center_x - m > 0): 
+            n = 0
+            lifespan_y = lifespan - m
+            while(lifespan_y > 0 ):#and center_y + n < self.size[1] and center_y - n > 0):
+                if(center_x + m < self.size[0]):
+                    if(center_y + n < self.size[1]):
+                        state_matrix[center_x+m,center_y+n] = class_val
+                if(center_x + m < self.size[0]):
+                    state_matrix[center_x+m,center_y-n] = class_val
+                if(center_y + n < self.size[1]):
+                    state_matrix[center_x-m,center_y+n] = class_val
+                state_matrix[center_x-m,center_y-n] = class_val
+                lifespan_y = lifespan_y - 0.1*shape[0]*n*np.random.rand(1)
+                n = n + 1
+            m = m + 1
+            lifespan = lifespan - 0.1*shape[1]*m*np.random.rand(1)
+
+        return state_matrix
