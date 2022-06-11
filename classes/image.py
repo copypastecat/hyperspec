@@ -15,9 +15,14 @@ class image:
     def generate_image(self, approx_share, nclusters):
         state_matrix = np.zeros(self.size)
         for i in range(1,nclusters+1):
-           state_matrix = self.make_cluster(state_matrix,approx_share,class_val=i)
+           state_matrix = self.make_cluster(state_matrix,approx_share,class_val=(i%len(self.substances)))
+
+        himage = np.zeros((state_matrix.shape[0],state_matrix.shape[1],self.nbins))
+        for x,y in np.ndindex(state_matrix.shape):
+            himage[x,y,:] = self.substances[int(state_matrix[x,y])].calculate_radiation(self.light_source)
+
     
-        return state_matrix
+        return state_matrix, himage
 
     def display():
         pass

@@ -7,4 +7,4 @@ class substance:
         self.absorption_pattern = absorption_pattern
 
     def calculate_radiation(self, light_source):
-        pass
+        return self.absorption_pattern * light_source.radiation_pattern
