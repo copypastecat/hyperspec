@@ -2,9 +2,9 @@
 
 class substance:
 
-    def __init__(self, name, absorption_pattern) -> None:
+    def __init__(self, name, radiation_pattern) -> None:
         self.name = name
-        self.absorption_pattern = absorption_pattern
+        self.radiation_pattern = radiation_pattern
 
     def calculate_radiation(self, light_source):
-        return self.absorption_pattern * light_source.radiation_pattern
+        return self.radiation_pattern * light_source.radiation_pattern
