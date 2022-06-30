@@ -13,14 +13,16 @@ class image:
         self.light_source = light_source
 
     def generate_image(self, approx_share, nclusters):
+        #create a underlying state-matrix with one state for each substance to simulate
         state_matrix = np.zeros(self.size)
         for i in range(1,nclusters+1):
+           #create a cluster for each substance
            state_matrix = self.make_cluster(state_matrix,approx_share,class_val=(i%len(self.substances)))
 
         himage = np.zeros((state_matrix.shape[0],state_matrix.shape[1],self.nbins))
+        #for each pixel, create a spectral dimension with the corresponding spectral characteristic of the state:
         for x,y in np.ndindex(state_matrix.shape):
             himage[x,y,:] = self.substances[int(state_matrix[x,y])].calculate_radiation(self.light_source)
-
     
         return state_matrix, himage
 
@@ -28,6 +30,7 @@ class image:
         pass
 
     def n_closest(x,n,d=1):
+       #not used for now
        return x[n[0]-d:n[0]+d+1,n[1]-d:n[1]+d+1]
 
     def make_cluster(self,state_matrix, approx_share, class_val=1):
