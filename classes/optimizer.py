@@ -1,6 +1,5 @@
 
-from math import log
-
+from math import *
 from jsonschema import RefResolutionError
 from classes.substance import substance
 import numpy as np
@@ -28,7 +27,7 @@ class optimizer:
             metric = self.D_optimality_criterion
 
         def optimization_target(fs):
-            return(-metric(self.calculate_FIM(np.round(fs).astype(int))))
+            return(-metric(self.calculate_FIM(fs)))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -53,7 +52,7 @@ class optimizer:
             metric = self.D_optimality_criterion
 
         def optimization_target(fs):
-            return(-metric(self.calculate_FIM(np.round(fs).astype(int))))
+            return(-metric(self.calculate_FIM(fs)))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -73,10 +72,16 @@ class optimizer:
         for i in range(S-1):
             for j in range(S-1):
                 for k in sampling_frequencies:
-                    phi_i = self.substances[i].radiation_pattern[k]
-                    phi_j = self.substances[j].radiation_pattern[k]
-                    phi_s = self.substances[-1].radiation_pattern[k]
-                    FIM[i,j] = FIM[i,j] + (1/variance[k])*(phi_i*phi_j - phi_s*(phi_i + phi_j) + (phi_s)**2)
+                    #to handle continuous frequencies: linearily interpolate between sampling points
+                    #enables use of continuous optimization methods without rounding...
+                    upper_k = ceil(k)
+                    lower_k = floor(k)
+                    residual = k - lower_k
+                    phi_i = residual*self.substances[i].radiation_pattern[lower_k] + (1-residual)*self.substances[i].radiation_pattern[upper_k]
+                    phi_j = residual*self.substances[j].radiation_pattern[lower_k] + (1-residual)*self.substances[j].radiation_pattern[upper_k]
+                    phi_s = residual*self.substances[-1].radiation_pattern[lower_k] + (1-residual)*self.substances[-1].radiation_pattern[upper_k]
+                    var_k = residual*variance[lower_k] + (1-residual)*variance[upper_k]
+                    FIM[i,j] = FIM[i,j] + (1/var_k)*(phi_i*phi_j - phi_s*(phi_i + phi_j) + (phi_s)**2)
                 
         return FIM
 
