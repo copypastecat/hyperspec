@@ -1,12 +1,13 @@
 #dummy main file for running simulations
 from classes import image
-from classes import substance
+from classes.substance import substance
 from classes import data_handler
 import numpy as np
 import matplotlib.pyplot as plt
 from classes.sensor import sensor
 from classes.light_source import light_source
 from classes.parameter_estimator import parameter_estimator
+from classes.optimizer import optimizer
 
 n_sim_freqs = 480
 
@@ -20,14 +21,27 @@ freqs_sand, spec_sand = data_handler.get_spectrum("splib07a_Sand_DWO-3-DEL2ar1_n
 
 #cut and resample the spectra to be defined over the same support set
 new_freqs, new_specs = data_handler.equalize_spectra([spec_water,spec_sand],["BECK","ASD"])
+water = substance("water",new_freqs, new_specs[0])
+sand = substance("sand",new_freqs,new_specs[1])
 
 #define sensor-models
 this_ideal_sensor =  sensor(n_sim_freqs,variances=0.00,bias = 0)
 this_sensor = sensor(n_sim_freqs, variances=0.01, bias=0)
 
 #sample from spectra using ideal sensor models (for ground truth)
-sampled_vals_water = this_ideal_sensor.sample(new_specs[0],samplingpoints=[100,300,450])
-sampled_vals_sand = this_ideal_sensor.sample(new_specs[1],samplingpoints=[100,300,450])
+sampling_freqs = [100,300,450]
+sampled_vals_water = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=sampling_freqs)
+sampled_vals_sand = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=sampling_freqs)
+
+#create optimizer
+this_optimizer = optimizer(substances=[water,sand],sensor=this_sensor,n_sim_freqs=n_sim_freqs)
+print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=sampling_freqs)))
+solution = this_optimizer.find_freqs(3,"D")
+print(solution)
+opt_freqs = solution[0]
+
+#print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=opt_freqs)))
+#print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
 mixture = 0.9*new_specs[0] + 0.1*new_specs[1]
@@ -36,14 +50,14 @@ mixture = 0.9*new_specs[0] + 0.1*new_specs[1]
 sampled_observation = this_sensor.sample(mixture,samplingpoints=[100,300,450])
 
 #plt.figure()
-#plt.plot(new_freqs,new_specs[0])
-#plt.plot(new_freqs,new_specs[1])
+#plt.plot(new_specs[0])
+#plt.plot(new_specs[1])
 #plt.show()
 
 #use the least-squares estimator to estimate the mixture coefficients
 this_estimator = parameter_estimator()
 estimated_mixture_coeffs = this_estimator.estimate_parameters(np.array([sampled_vals_water,sampled_vals_sand]).T,sampled_observation)
-print(estimated_mixture_coeffs)
+#print(estimated_mixture_coeffs)
 
 ####
 #image generation (skipped for now...)
