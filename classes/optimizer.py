@@ -27,13 +27,13 @@ class optimizer:
             metric = self.D_optimality_criterion
 
         def optimization_target(fs):
-            return(-metric(self.calculate_FIM(fs)))
+            return(-metric(self.calculate_FIM(fs,interpolate=True)) - np.abs(np.sum(np.diff(fs))))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
         for i in range(N):
             bounds.append(bound)
-        solution = opt.dual_annealing(optimization_target,bounds=bounds, no_local_search=True, x0=initial_guess)
+        solution = opt.dual_annealing(optimization_target,bounds=bounds, x0=initial_guess)
         #solution = opt.brute(optimization_target,ranges=bounds)
         
         #return solution
@@ -52,7 +52,7 @@ class optimizer:
             metric = self.D_optimality_criterion
 
         def optimization_target(fs):
-            return(-metric(self.calculate_FIM(fs)))
+            return(-metric(self.calculate_FIM(fs)))# - np.abs(np.sum(np.diff(fs))))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -63,7 +63,7 @@ class optimizer:
         
         return solution
 
-    def calculate_FIM(self, sampling_frequencies):
+    def calculate_FIM(self, sampling_frequencies, interpolate=False):
         #calculate the Fisher Information Matrix for a Gaussian data model assuming linear spectral mixing with 
         # abundance non-negativity constraint (ANC) and abundance sum constraint (ASC) 
         S = len(self.substances)
@@ -74,13 +74,19 @@ class optimizer:
                 for k in sampling_frequencies:
                     #to handle continuous frequencies: linearily interpolate between sampling points
                     #enables use of continuous optimization methods without rounding...
-                    upper_k = ceil(k)
-                    lower_k = floor(k)
-                    residual = k - lower_k
-                    phi_i = residual*self.substances[i].radiation_pattern[lower_k] + (1-residual)*self.substances[i].radiation_pattern[upper_k]
-                    phi_j = residual*self.substances[j].radiation_pattern[lower_k] + (1-residual)*self.substances[j].radiation_pattern[upper_k]
-                    phi_s = residual*self.substances[-1].radiation_pattern[lower_k] + (1-residual)*self.substances[-1].radiation_pattern[upper_k]
-                    var_k = residual*variance[lower_k] + (1-residual)*variance[upper_k]
+                    if(interpolate):
+                       upper_k = ceil(k)
+                       lower_k = floor(k)
+                       residual = k - lower_k
+                       phi_i = residual*self.substances[i].radiation_pattern[lower_k] + (1-residual)*self.substances[i].radiation_pattern[upper_k]
+                       phi_j = residual*self.substances[j].radiation_pattern[lower_k] + (1-residual)*self.substances[j].radiation_pattern[upper_k]
+                       phi_s = residual*self.substances[-1].radiation_pattern[lower_k] + (1-residual)*self.substances[-1].radiation_pattern[upper_k]
+                       var_k = residual*variance[lower_k] + (1-residual)*variance[upper_k]
+                    else:
+                        phi_i = self.substances[i].radiation_pattern[int(k)]
+                        phi_j = self.substances[j].radiation_pattern[int(k)]
+                        phi_s = self.substances[-1].radiation_pattern[int(k)]
+                        var_k = variance[int(k)] 
                     FIM[i,j] = FIM[i,j] + (1/var_k)*(phi_i*phi_j - phi_s*(phi_i + phi_j) + (phi_s)**2)
                 
         return FIM

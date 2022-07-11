@@ -11,6 +11,6 @@ class parameter_estimator:
 
     def ls_est(self, X, Y):
         #compute least squares estimate
-        #@X: n_substances x n_frequencies array of true specrum values at sampling points,
+        #@X: n_substances x n_frequencies array of true specrum values at sampling points (i.e. mixing matrix in LMM),
         #@Y: n_frequencies vector of observations 
        return np.linalg.lstsq(X,Y,rcond=None)
