@@ -27,7 +27,7 @@ class optimizer:
             metric = self.D_optimality_criterion
 
         def optimization_target(fs):
-            return(-metric(self.calculate_FIM(fs,interpolate=True)) - np.abs(np.sum(np.diff(fs))))
+            return(-metric(self.calculate_FIM(fs,interpolate=True)))# - np.abs(np.sum(np.diff(fs))))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -61,6 +61,19 @@ class optimizer:
         print(bounds)
         solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
         
+        return solution
+
+    def find_freqs_brute_Bhattacharyya(self,N,verbose=False):
+        def optimization_target(fs):
+            return(-self.Bhattacharyya_distance(fs))
+        
+        bound = (0,self.n_sim_freqs-1)
+        bounds = []
+        for i in range(N):
+            bounds.append(bound)
+        print(bounds)
+        solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
+
         return solution
 
     def calculate_FIM(self, sampling_frequencies, interpolate=False):
@@ -99,3 +112,16 @@ class optimizer:
 
     def A_optimality_criterion(self,FIM):
         return np.trace(FIM)
+
+    def Bhattacharyya_distance(self, sampling_frequencies):
+        d_sum = 0
+        sampling_frequencies = sampling_frequencies.astype(int)
+        for i in range(len(self.substances)):
+            for j in range(len(self.substances)):
+                if(i != j):
+                    for n in range(len(sampling_frequencies)):
+                        d_sum = d_sum + (1/(self.sensor.variances[sampling_frequencies[n]]))*(self.substances[i].radiation_pattern[sampling_frequencies[n]] - self.substances[j].radiation_pattern[sampling_frequencies[n]])**2
+
+        return d_sum
+
+
