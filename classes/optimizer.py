@@ -1,9 +1,12 @@
 
 from math import *
 from jsonschema import RefResolutionError
+from matplotlib.pyplot import sci
 from classes.substance import substance
 import numpy as np
 import scipy.optimize as opt
+import scipy.stats as stats
+import scipy.integrate as integrate
 
 
 class optimizer:
@@ -63,9 +66,14 @@ class optimizer:
         
         return solution
 
-    def find_freqs_brute_Bhattacharyya(self,N,verbose=False):
+    def find_freqs_brute_GBD(self,N,verbose=False):
+        #find optimal solution using generalized Bhattacharyya distance
+        if(N > 3):
+            print("Too many sampling frequencies for numerical integration of BC!")
+            return None
+        
         def optimization_target(fs):
-            return(-self.Bhattacharyya_distance(fs))
+            return(-self.generalized_Bhattacharyya_distance(fs))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -75,6 +83,7 @@ class optimizer:
         solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
 
         return solution
+
 
     def calculate_FIM(self, sampling_frequencies, interpolate=False):
         #calculate the Fisher Information Matrix for a Gaussian data model assuming linear spectral mixing with 
@@ -113,15 +122,27 @@ class optimizer:
     def A_optimality_criterion(self,FIM):
         return np.trace(FIM)
 
-    def Bhattacharyya_distance(self, sampling_frequencies):
-        d_sum = 0
-        sampling_frequencies = sampling_frequencies.astype(int)
-        for i in range(len(self.substances)):
-            for j in range(len(self.substances)):
-                if(i != j):
-                    for n in range(len(sampling_frequencies)):
-                        d_sum = d_sum + (1/(self.sensor.variances[sampling_frequencies[n]]))*(self.substances[i].radiation_pattern[sampling_frequencies[n]] - self.substances[j].radiation_pattern[sampling_frequencies[n]])**2
+    def generalized_Bhattacharyya_distance(self, sampling_frequencies):
+        if(len(sampling_frequencies) > 3): 
+            print("too many dimensions for numerical integration, try less sampling frquencies")
+            return None
 
-        return d_sum
+        pdfs = []
+        n_classes = len(self.substances)
+        sampling_frequencies = sampling_frequencies.astype(int)
+        for s in self.substances:
+            pdf = stats.multivariate_normal(s.radiation_pattern[sampling_frequencies], self.sensor.variances[sampling_frequencies])
+            pdfs.append(pdf)
+        if(len(sampling_frequencies) == 1):
+            f = lambda x: np.prod([pdf.pdf(x) for pdf in pdfs])
+            BC = integrate.quad(f,-np.inf,np.inf)
+        if(len(sampling_frequencies) == 2):
+            f = lambda x1, x2: np.prod([pdf.pdf([x1,x2]) for pdf in pdfs])
+            BC = integrate.dblquad(f, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)
+        if(len(sampling_frequencies) == 3):
+            f = lambda x1, x2, x3: np.prod([pdf.pdf([x1,x2,x3]) for pdf in pdfs])
+            BC = integrate.tplquad(f, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf, lambda x,y: -np.inf, lambda x,y: np.inf)
+
+        return -log(BC[0])
 
 
