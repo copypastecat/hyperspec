@@ -9,7 +9,7 @@ from classes.light_source import light_source
 from classes.parameter_estimator import parameter_estimator
 from classes.optimizer import optimizer
 
-n_sim_freqs = 50
+n_sim_freqs = 60
 N = 3
 
 
@@ -32,9 +32,8 @@ nothing = substance("nothing", new_freqs, np.zeros(len(new_freqs)))
 
 #define sensor-models
 this_ideal_sensor =  sensor(n_sim_freqs,variances=0.00,bias = 0)
-this_sensor = sensor(n_sim_freqs, variances=0.001, bias=0)
 
-standard_sampling_freqs = np.linspace(0,n_sim_freqs-1,num=N)
+standard_sampling_freqs = np.array([3,5,8]) #RGB for n_sim_freqs = 60, min(ADS,BECK) range
 #sample from spectra using ideal sensor models (for ground truth)
 sampling_freqs = [19,1,4]
 sampled_vals_water = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
@@ -42,9 +41,10 @@ sampled_vals_sand = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoin
 sampled_vals_concrete = this_ideal_sensor.sample(concrete.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
 
 #create optimizer
+this_sensor = sensor(n_sim_freqs, variances=0.01, bias=0)
 this_optimizer = optimizer(substances=[water,sand,concrete,nothing],sensor=this_sensor,n_sim_freqs=n_sim_freqs)
 solution = this_optimizer.find_freqs_brute(N=N,criterion="D")
-print(solution)
+#print(solution)
 opt_freqs = solution[0]
 sampled_vals_water_opt = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=solution.astype(int))
 sampled_vals_sand_opt = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=solution.astype(int))
@@ -58,18 +58,20 @@ coeffs = [0.3,0.3,0.4]
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2]
 
 #sample from mixture with noisy sensor, compute statistics
+print(new_freqs)
 this_estimator = parameter_estimator()
 avg_n = 50
 MSEs_opt=[]
 MSEs_std = []
 for m in range(avg_n):
-    n_obs = np.arange(1,200)
+    vars = np.flip(np.arange(0.001,0.2,0.0001))
     MSE_opt = []
     MSE_std = []
-    for n in n_obs:
+    for var in vars:
+       this_sensor = sensor(n_sim_freqs, variances=var, bias=0)
        observations_opt = []
        observations_std = []
-       for i in range(n):
+       for i in range(1):
            observations_opt.append(this_sensor.sample(mixture,samplingpoints=solution.astype(int)))
            observations_std.append(this_sensor.sample(mixture,standard_sampling_freqs.astype(int)))
        opt_arr = np.array(observations_opt)
@@ -88,9 +90,13 @@ for m in range(avg_n):
 #compute average estimation error:
 MSEs_opt = np.array(MSEs_opt)
 MSEs_std = np.array(MSEs_std)
-plt.plot(MSEs_opt.mean(axis=0))
-plt.plot(MSEs_std.mean(axis=0))
-plt.legend(["MSE optimal sampling", "MSE standard sampling"])
+plt.plot(vars,MSEs_opt.mean(axis=0))
+plt.plot(vars,MSEs_std.mean(axis=0))
+plt.xlabel("$\sigma^2$")
+plt.ylabel("$MSE_{avg}$")
+plt.legend(["optimal sampling", "RGB sampling"])
+plt.title("Average MSE of estimated coefficients using LS \n under increasing noise power (concrete, water, sand)")
+plt.savefig("avg_LS_err_increasingVar.pdf")
 plt.show()
 
     
@@ -103,10 +109,6 @@ plt.show()
 #plt.legend(["water","sand","concrete"])
 #plt.show()
 
-#use the least-squares estimator to estimate the mixture coefficients
-
-#estimated_mixture_coeffs = this_estimator.estimate_parameters(np.array([sampled_vals_water,sampled_vals_sand]).T,sampled_observation)
-#print(estimated_mixture_coeffs)
 
 ####
 #image generation (skipped for now...)
