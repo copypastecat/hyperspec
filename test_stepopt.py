@@ -10,9 +10,9 @@ freqs = np.arange(0,10)
 s1_spec = np.zeros(10)
 s1_spec[1:3] = 1
 s2_spec = np.zeros(10)
-s2_spec[4:5] = 1
+s2_spec[4:6] = 1
 s3_spec = np.zeros(10)
-s3_spec[7:8] = 1
+s3_spec[7:9] = 1
 #if one wants to add the hypothesis: "non of the 3 substances is present"
 s4_spec = np.zeros(10)
 
@@ -25,8 +25,9 @@ this_sensor = sensor(len(freqs),variances=1)
 
 opt = optimizer(substances=[s1,s2,s3],sensor=this_sensor,n_sim_freqs=len(freqs))
 
-optimal_solution = opt.find_freqs_brute(2, "D",verbose=True)
-optimal_solution_BD = opt.find_freqs_brute_GBD(2,verbose=True)
+optimal_solution = opt.find_freqs_brute(3, "D",verbose=True)
+#optimal_solution_BD = opt.find_freqs_brute_GBD(2,verbose=True)
+approx_solution_minkowski = opt.find_freqs_minokwski_approx(3)
 grid = optimal_solution[2]
 fvals = optimal_solution[3]
 
@@ -44,11 +45,12 @@ plt.show()
 '''
 
 #plot result
-plt.plot(freqs, s1_spec + s2_spec + s3_spec, '-kD', markevery=optimal_solution[0].astype(int))
-#plt.show()
+plt.plot(freqs, s1_spec + s2_spec + s3_spec, '-kD', markevery=approx_solution_minkowski[0].astype(int))
+plt.show()
 
 print(optimal_solution[0:2])
-print(optimal_solution_BD[0:2])
+#print(optimal_solution_BD[0:2])
+print(approx_solution_minkowski)
 #print(np.unique(fvals))
 
 

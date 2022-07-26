@@ -62,7 +62,7 @@ class optimizer:
         for i in range(N):
             bounds.append(bound)
         print(bounds)
-        solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
+        solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose, finish=None)
         
         return solution
 
@@ -83,6 +83,20 @@ class optimizer:
         solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
 
         return solution
+
+    def find_freqs_minokwski_approx(self,N,verbose=False):
+        #find approximation of optimal frequencies using det(A+B) >= det(A) + det(B)
+        #arising from Minkowski's inequality (approximate D-optimal design)
+        I_f = []
+        for n in range(self.n_sim_freqs):
+            I = self.calculate_FIM([n])
+            I_f.append(np.linalg.det(I))
+            #print("FIM: ", I, "with determinant ", np.linalg.det(I))
+        
+        I_f = np.array(I_f)
+        max_ind = np.argpartition(I_f, -N)[-N:]
+
+        return max_ind
 
 
     def calculate_FIM(self, sampling_frequencies, interpolate=False):

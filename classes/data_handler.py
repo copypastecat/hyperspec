@@ -10,6 +10,7 @@ class data_handler:
         self.sensors = sensors #what sensors are used for the dataset (for range/res info)
         self.nsamplingpoints = nsamplingpoints #sampling granularity in the simulation
         self.sensorwls = {} #to fill below
+        self.sensorwls["chitin1"] = np.arange(0.25,0.7,0.001)
         for i, sensor in enumerate(sensors):
             path = os.path.join(self.datapath,wavelength_files[i])
             self.sensorwls[sensor] = np.array(pd.read_csv(path)) #put the actual  sampling frequencies of the sensors into a dict
