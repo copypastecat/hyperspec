@@ -1,5 +1,4 @@
 #dummy main file for running simulations
-from multiprocessing.pool import ApplyResult
 from classes.image import image
 from classes.substance import substance
 from classes.data_handler import data_handler
@@ -36,7 +35,7 @@ chitin = substance("chitin",new_freqs,new_specs[3])
 nothing = substance("nothing", new_freqs, np.zeros(len(new_freqs)))
 
 #define sensor-models, optimizer
-this_sensor = sensor(n_sim_freqs, variances=0.01, bias=0)
+this_sensor = sensor(n_sim_freqs, variances=0.1, bias=0)
 this_ideal_sensor =  sensor(n_sim_freqs,variances=0.00,bias = 0)
 this_optimizer = optimizer(substances=[water,sand,concrete,chitin,nothing],sensor=this_sensor,n_sim_freqs=n_sim_freqs)
 standard_sampling_freqs = np.array([3,5,8]) #RGB for n_sim_freqs = 60, min(ADS,BECK) range
@@ -64,18 +63,18 @@ sampled_vals_chitin_approx = this_ideal_sensor.sample(chitin.radiation_pattern,s
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
-coeffs = [0.5,0,0,0.5]
+coeffs = [0.0,0.0,1.0,0.0]
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2] + coeffs[3]*new_specs[3]
 #'''
 #sample from mixture with noisy sensor, compute statistics
 #print(new_freqs)
 this_estimator = parameter_estimator(method="cls")
-avg_n = 50
+avg_n = 100
 MSEs_opt=[]
 MSEs_std = []
 MSEs_approx = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.001,0.2,0.001))
+    vars = np.flip(np.arange(0.000,10,0.1))
     MSE_opt = []
     MSE_std = []
     MSE_approx = []
@@ -117,8 +116,8 @@ plt.plot(vars,MSEs_approx.mean(axis=0))
 plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
 plt.legend(["D-optimal", "RGB", "approximate D-optimal"])
-plt.title("Average MSE of estimated coefficients using LS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_LS_err_detapproxvsoptvsRGB_halfchitin_halfwater.pdf")
+plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
+plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_muchnoise.pdf")
 plt.show()
 #'''
 
