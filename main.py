@@ -9,6 +9,7 @@ from classes.sensor import sensor
 from classes.light_source import light_source
 from classes.parameter_estimator import parameter_estimator
 from classes.optimizer import optimizer
+import sys
 
 n_sim_freqs = 60
 N = 3
@@ -74,7 +75,7 @@ MSEs_opt=[]
 MSEs_std = []
 MSEs_approx = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,10,0.1))
+    vars = np.flip(np.arange(0.000,5,1))
     MSE_opt = []
     MSE_std = []
     MSE_approx = []
@@ -105,6 +106,10 @@ for m in range(avg_n):
     MSEs_opt.append(MSE_opt)
     MSEs_std.append(MSE_std)
     MSEs_approx.append(MSE_approx)
+    progress = (m/avg_n) * 100
+    if(progress%1.0 == 0):
+        sys.stdout.write("\r{0}>".format("="*int(progress)))
+        sys.stdout.flush()
 
 #compute average estimation error:
 MSEs_opt = np.array(MSEs_opt)
@@ -117,7 +122,7 @@ plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
 plt.legend(["D-optimal", "RGB", "approximate D-optimal"])
 plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_muchnoise.pdf")
+plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_1000iter.pdf")
 plt.show()
 #'''
 
@@ -129,6 +134,8 @@ plt.plot(new_freqs, new_specs[0],"-bD",markevery=solution.astype(int))
 plt.plot(new_freqs, new_specs[1],"-gD",markevery=solution.astype(int))
 plt.plot(new_freqs, new_specs[2],"-kD",markevery=solution.astype(int))
 plt.plot(new_freqs, new_specs[3],"-rD",markevery=solution.astype(int))
+plt.xlabel("$\lambda (\mu m)$")
+plt.ylabel("reflection")
 plt.legend(["water","sand","concrete","layered chitin"])
 plt.show()
 '''
