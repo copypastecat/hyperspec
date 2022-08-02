@@ -23,17 +23,14 @@ s4 = substance("s4", freqs=freqs,  radiation_pattern=s4_spec)
 
 this_sensor = sensor(len(freqs),variances=1)
 
-opt = optimizer(substances=[s1,s2,s3],sensor=this_sensor,n_sim_freqs=len(freqs))
+opt = optimizer(substances=[s1,s2,s3,s4],sensor=this_sensor,n_sim_freqs=len(freqs))
 
 optimal_solution = opt.find_freqs_brute(3, "D",verbose=True)
-#optimal_solution_BD = opt.find_freqs_brute_GBD(2,verbose=True)
+optimal_solution_BD = opt.find_freqs_brute_GBD(3,verbose=True)
 approx_solution_minkowski = opt.find_freqs_minokwski_approx(3)
 grid = optimal_solution[2]
 fvals = optimal_solution[3]
 
-FIM_opt = opt.calculate_FIM(optimal_solution[0])
-print(FIM_opt)
-#print(np.linalg.inv(FIM_opt))
 
 '''
 X = freqs
@@ -45,11 +42,11 @@ plt.show()
 '''
 
 #plot result
-plt.plot(freqs, s1_spec + s2_spec + s3_spec, '-kD', markevery=approx_solution_minkowski[0].astype(int))
-plt.show()
+#plt.plot(freqs, s1_spec + s2_spec + s3_spec, '-kD', markevery=approx_solution_minkowski[0].astype(int))
+#plt.show()
 
 print(optimal_solution[0:2])
-#print(optimal_solution_BD[0:2])
+print(optimal_solution_BD[0:2])
 print(approx_solution_minkowski)
 #print(np.unique(fvals))
 

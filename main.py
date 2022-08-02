@@ -10,6 +10,7 @@ from classes.light_source import light_source
 from classes.parameter_estimator import parameter_estimator
 from classes.optimizer import optimizer
 import sys
+import pandas as pd
 
 n_sim_freqs = 60
 N = 3
@@ -64,18 +65,18 @@ sampled_vals_chitin_approx = this_ideal_sensor.sample(chitin.radiation_pattern,s
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
-coeffs = [0.0,0.0,1.0,0.0]
+coeffs = [0.5,0.0,0.0,0.5]
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2] + coeffs[3]*new_specs[3]
 #'''
 #sample from mixture with noisy sensor, compute statistics
 #print(new_freqs)
 this_estimator = parameter_estimator(method="cls")
-avg_n = 100
+avg_n = 1000
 MSEs_opt=[]
 MSEs_std = []
 MSEs_approx = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,5,1))
+    vars = np.flip(np.arange(0.000,4,0.01))
     MSE_opt = []
     MSE_std = []
     MSE_approx = []
@@ -107,14 +108,16 @@ for m in range(avg_n):
     MSEs_std.append(MSE_std)
     MSEs_approx.append(MSE_approx)
     progress = (m/avg_n) * 100
-    if(progress%1.0 == 0):
-        sys.stdout.write("\r{0}>".format("="*int(progress)))
-        sys.stdout.flush()
+    sys.stdout.write("\r{0}>".format(m))
+    sys.stdout.flush()
 
 #compute average estimation error:
 MSEs_opt = np.array(MSEs_opt)
 MSEs_std = np.array(MSEs_std)
 MSEs_approx = np.array(MSEs_approx)
+df_data = np.array([MSEs_opt.mean(axis=0),MSEs_approx.mean(axis=0),MSEs_std.mean(axis=0)]).T
+df = pd.DataFrame(df_data,columns=["optimal","approximate","RGB"])
+df.to_csv("MSEdata_halfwaterhalfchitin.csv")
 plt.plot(vars,MSEs_opt.mean(axis=0))
 plt.plot(vars,MSEs_std.mean(axis=0))
 plt.plot(vars,MSEs_approx.mean(axis=0))
@@ -122,7 +125,7 @@ plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
 plt.legend(["D-optimal", "RGB", "approximate D-optimal"])
 plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_1000iter.pdf")
+plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_1000iter_4var.pdf")
 plt.show()
 #'''
 

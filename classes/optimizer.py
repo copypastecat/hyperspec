@@ -68,12 +68,9 @@ class optimizer:
 
     def find_freqs_brute_GBD(self,N,verbose=False):
         #find optimal solution using generalized Bhattacharyya distance
-        if(N > 3):
-            print("Too many sampling frequencies for numerical integration of BC!")
-            return None
         
         def optimization_target(fs):
-            return(-self.generalized_Bhattacharyya_distance(fs))
+            return(-self.generalized_Bhattacharyya_distance(fs.astype(int)))
         
         bound = (0,self.n_sim_freqs-1)
         bounds = []
@@ -137,26 +134,21 @@ class optimizer:
         return np.trace(FIM)
 
     def generalized_Bhattacharyya_distance(self, sampling_frequencies):
-        if(len(sampling_frequencies) > 3): 
-            print("too many dimensions for numerical integration, try less sampling frquencies")
-            return None
+        # calculates generalized Bhattacharyya-Distance for S classes, using a WGN model for N sampling frequencies
+        # the WGN modelling assumption leads to equal covariance matricies for all classes. Each class-mean corresponds
+        # to the value of the reflectance spectrum of the substance associated with the class.
+        S = len(self.substances)
+        N = len(sampling_frequencies)
+        mus = np.zeros((S,N))
+        for i, substance in enumerate(self.substances):
+           mus[i,:] = substance.radiation_pattern[sampling_frequencies].T
+        mus = mus.T
+        
+        A = np.matrix(self.sensor.variances[sampling_frequencies] * np.eye(N)) #assuming equal cov-matr. for all classes
+        theta_temp = np.matrix((1/S)*np.sum(np.linalg.inv(A) * mus,axis=1))
+        theta = A * theta_temp
+        GBD = (1/2) * (-(theta.T*np.linalg.inv(A)*theta) + ((1/S)*np.sum(mus.T * np.linalg.inv(A) * mus))) #log term disappears due to equal covs
 
-        pdfs = []
-        n_classes = len(self.substances)
-        sampling_frequencies = sampling_frequencies.astype(int)
-        for s in self.substances:
-            pdf = stats.multivariate_normal(s.radiation_pattern[sampling_frequencies], self.sensor.variances[sampling_frequencies])
-            pdfs.append(pdf)
-        if(len(sampling_frequencies) == 1):
-            f = lambda x: np.prod([pdf.pdf(x) for pdf in pdfs])
-            BC = integrate.quad(f,-np.inf,np.inf)
-        if(len(sampling_frequencies) == 2):
-            f = lambda x1, x2: np.prod([pdf.pdf([x1,x2]) for pdf in pdfs])
-            BC = integrate.dblquad(f, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)
-        if(len(sampling_frequencies) == 3):
-            f = lambda x1, x2, x3: np.prod([pdf.pdf([x1,x2,x3]) for pdf in pdfs])
-            BC = integrate.tplquad(f, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf, lambda x,y: -np.inf, lambda x,y: np.inf)
-
-        return -log(BC[0])
+        return float(GBD)
 
 
