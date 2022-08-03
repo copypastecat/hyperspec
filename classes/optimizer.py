@@ -61,7 +61,7 @@ class optimizer:
         bounds = []
         for i in range(N):
             bounds.append(bound)
-        print(bounds)
+        #print(bounds)
         solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose, finish=None)
         
         return solution
@@ -76,7 +76,7 @@ class optimizer:
         bounds = []
         for i in range(N):
             bounds.append(bound)
-        print(bounds)
+        #print(bounds)
         solution = opt.brute(optimization_target,ranges=bounds, Ns=self.n_sim_freqs,full_output=verbose)
 
         return solution

@@ -11,13 +11,14 @@ from classes.parameter_estimator import parameter_estimator
 from classes.optimizer import optimizer
 import sys
 import pandas as pd
+import time
 
 n_sim_freqs = 60
-N = 3
+N = 2
 
 
 #read in spectral data from dataset
-this_data_handler = data_handler("../datasets/usgs_selected",["BECK","ASD","chitin1"],["splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt","splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt","wavelengths_chitin_1.txt"],n_sim_freqs)
+this_data_handler = data_handler("./usgs_selected",["BECK","ASD","chitin1"],["splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt","splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt","wavelengths_chitin_1.txt"],n_sim_freqs)
 freqs_water, spec_water = this_data_handler.get_spectrum("splib07a_Seawater_Coast_Chl_SW1_BECKa_AREF.txt","BECK")
 freqs_sand, spec_sand = this_data_handler.get_spectrum("splib07a_Sand_DWO-3-DEL2ar1_no_oil_ASDFRa_AREF.txt","ASD")
 freqs_concrete, spec_concrete = this_data_handler.get_spectrum("s07_AV14_Concrete_WTC01-37A_ASDFRa_AREF.txt","ASD")
@@ -41,8 +42,13 @@ this_sensor = sensor(n_sim_freqs, variances=0.1, bias=0)
 this_ideal_sensor =  sensor(n_sim_freqs,variances=0.00,bias = 0)
 this_optimizer = optimizer(substances=[water,sand,concrete,chitin,nothing],sensor=this_sensor,n_sim_freqs=n_sim_freqs)
 standard_sampling_freqs = np.array([3,5,8]) #RGB for n_sim_freqs = 60, min(ADS,BECK) range
+t_Dopt_start = time.time()
 solution = this_optimizer.find_freqs_brute(N=N,criterion="D")
+#solution = np.array([1,2,3,4])
+t_Dopt_stop = time.time()
+t_mink_start = time.time()
 approx_sampling_freqs = this_optimizer.find_freqs_minokwski_approx(N=N)
+t_mink_stop = time.time()
 #sample from spectra using ideal sensor models (for ground truth)
 sampled_vals_water = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
 sampled_vals_sand = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
@@ -65,9 +71,9 @@ sampled_vals_chitin_approx = this_ideal_sensor.sample(chitin.radiation_pattern,s
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
-coeffs = [0.5,0.0,0.0,0.5]
+coeffs = [0.0,0.0,1.0,0.0]
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2] + coeffs[3]*new_specs[3]
-#'''
+'''
 #sample from mixture with noisy sensor, compute statistics
 #print(new_freqs)
 this_estimator = parameter_estimator(method="cls")
@@ -76,7 +82,7 @@ MSEs_opt=[]
 MSEs_std = []
 MSEs_approx = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,4,0.01))
+    vars = np.flip(np.arange(0.000,2,0.1))
     MSE_opt = []
     MSE_std = []
     MSE_approx = []
@@ -117,21 +123,21 @@ MSEs_std = np.array(MSEs_std)
 MSEs_approx = np.array(MSEs_approx)
 df_data = np.array([MSEs_opt.mean(axis=0),MSEs_approx.mean(axis=0),MSEs_std.mean(axis=0)]).T
 df = pd.DataFrame(df_data,columns=["optimal","approximate","RGB"])
-df.to_csv("MSEdata_halfwaterhalfchitin.csv")
+df.to_csv("MSEdata_GBD_onlyconcrete.csv")
 plt.plot(vars,MSEs_opt.mean(axis=0))
 plt.plot(vars,MSEs_std.mean(axis=0))
 plt.plot(vars,MSEs_approx.mean(axis=0))
 plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
-plt.legend(["D-optimal", "RGB", "approximate D-optimal"])
+plt.legend(["D-optimal", "RGB", "GBD"])
 plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_CLS_err_detapproxvsoptvsRGB_onlyconcrete_1000iter_4var.pdf")
+plt.savefig("avg_CLS_err_GBDvsoptvsRGB_onlyconcrete_1000iter.pdf")
 plt.show()
-#'''
+'''
 
     
 
-'''
+#'''
 plt.figure()
 plt.plot(new_freqs, new_specs[0],"-bD",markevery=solution.astype(int))
 plt.plot(new_freqs, new_specs[1],"-gD",markevery=solution.astype(int))
@@ -141,7 +147,10 @@ plt.xlabel("$\lambda (\mu m)$")
 plt.ylabel("reflection")
 plt.legend(["water","sand","concrete","layered chitin"])
 plt.show()
-'''
+#'''
+
+print("Time for D-optimal calculation: ", t_Dopt_stop - t_Dopt_start)
+print("Time for calculation of Minkowski approximation: ", t_mink_stop - t_mink_start)
 
 '''
 ####
