@@ -1,12 +1,9 @@
 
 from math import *
-from jsonschema import RefResolutionError
-from matplotlib.pyplot import sci
+from tkinter import N
 from classes.substance import substance
 import numpy as np
 import scipy.optimize as opt
-import scipy.stats as stats
-import scipy.integrate as integrate
 
 
 class optimizer:
@@ -16,6 +13,19 @@ class optimizer:
         self.light_source = light_source
         self.n_sim_freqs = n_sim_freqs
         self.sensor = sensor
+        self.DFBB_lower = -np.inf
+        self.DFBB_vbest = np.zeros(n_sim_freqs)
+        S = len(substances)
+        self.FIMs = np.zeros((S-1,S-1,n_sim_freqs))
+        self.FIMs_already_calculated = False
+        #pre-calculate single-frequency FIMs
+        self.calculate_Iks()
+
+    def calculate_Iks(self):
+        if(not self.FIMs_already_calculated):
+            for i in range(self.n_sim_freqs):
+                self.FIMs[:,:,i] = self.calculate_FIM([i])
+
 
     def find_freqs(self,N,criterion):
         initial_guess = np.random.choice(self.n_sim_freqs,N)
@@ -95,6 +105,13 @@ class optimizer:
 
         return max_ind
 
+    def find_freqs_DFBB(self,N,verbose=False):
+        # wrapper for recursive BB method
+
+        # start recursion form BB-trees root (empty sets for I_0, I_1):
+        self.recursive_DFBB([],[],N)
+
+        return self.DFBB_vbest
 
     def calculate_FIM(self, sampling_frequencies, interpolate=False):
         #calculate the Fisher Information Matrix for a Gaussian data model assuming linear spectral mixing with 
@@ -151,4 +168,74 @@ class optimizer:
 
         return float(GBD)
 
+
+    def recursive_DFBB(self,I_1,I_0,N):
+        # depth-first branch and bound det-FIM optimization method implemented after Ucinski, Patan: 
+        # D-optimal design of a monitoring network for parameter estimation of distributed systems (2007). 
+        # Used helper functions are defined below
+        if((len(I_0) > self.n_sim_freqs-N) or len(I_1) > N):
+            return 
+        if(self.singularity_test(I_0,I_1,N)):
+            return
+        v_relaxed, det_FIM = self.relaxed_solution(I_0,I_1,N)
+        #print("Relaxed solution: ", v_relaxed)
+        if(det_FIM < self.DFBB_lower):
+            #prune
+            return
+        elif(self.integral_test(v_relaxed)):
+            #bound
+            self.DFBB_vbest = v_relaxed
+            self.DFBB_lower = det_FIM
+        else:
+            #branch
+            i_star = self.index_branch(v_relaxed)
+            self.recursive_DFBB(I_1=(I_1+[i_star]),I_0=I_0,N=N)
+            self.recursive_DFBB(I_1=I_1,I_0=(I_0+[i_star]),N=N)
+
+
+        
+#-----------------BRANCH-AND-BOUND INTERNAL HELPER FUNCTIONS-----------------------------------
+
+    def singularity_test(self,I_0,I_1,N):
+        rel_ind = [value for value in range(self.n_sim_freqs) if (value not in I_0) and (value not in I_1)] #indicies to relax
+        r = N - len(I_1)
+        q = len(rel_ind)
+        test_matrix = np.sum(self.FIMs[:,:,I_1],axis=2) + (r/q)*np.sum(self.FIMs[:,:,rel_ind],axis=2)
+
+        return (np.linalg.det(test_matrix) == 0)
+
+    def relaxed_solution(self,I_0,I_1,N):
+        #find optimal solution to relaxed problem
+        #calculate optimization constants:
+        w_ind = [value for value in range(self.n_sim_freqs) if (value not in I_0) and (value not in I_1)]
+        q = len(w_ind)
+        r = N - len(I_1)
+        c = self.FIMs[:,:,w_ind]
+        A = np.vstack([np.ones(q),np.eye(q),-np.eye(q)])
+        b = np.hstack([r,np.ones(q),np.zeros(q)]).T
+
+        def target(x):
+            M = np.sum(self.FIMs[:,:,I_1],axis=2) + np.sum(x*self.FIMs[:,:,w_ind],axis=2)
+            return -np.log(np.linalg.det(M))
+
+        #define and solve LP
+        start = (r/q)*np.ones(q)
+        constraints = opt.LinearConstraint(A=A,ub=b,lb=-inf)
+        solution = opt.minimize(target, x0=start, method='SLSQP',constraints=constraints)
+
+        #construct v_relaxed
+        v_relaxed = np.zeros(self.n_sim_freqs)
+        v_relaxed[I_1] = 1
+        v_relaxed[w_ind] = solution.x
+        det_FIM = solution.fun
+
+        return v_relaxed, det_FIM #np.linalg.det(np.sum(self.FIMs[:,:,I_1] + np.sum(x.value*self.FIMs[:,:,w_ind],axis=2),axis=2))
+
+    def integral_test(self, v):
+        arr_1 = v[v!=0]
+        arr_notint = arr_1[arr_1!=1]
+        return (len(arr_notint) == 0)
+
+    def index_branch(self, v):
+        return np.argmin(abs(v - 0.5))
 
