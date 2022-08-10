@@ -110,8 +110,9 @@ class optimizer:
 
         # start recursion form BB-trees root (empty sets for I_0, I_1):
         self.recursive_DFBB([],[],N)
+        indicies = np.where(self.DFBB_vbest == 1)[0]
 
-        return self.DFBB_vbest
+        return indicies, np.linalg.det(np.sum(self.FIMs[:,:,indicies],axis=2))
 
     def calculate_FIM(self, sampling_frequencies, interpolate=False):
         #calculate the Fisher Information Matrix for a Gaussian data model assuming linear spectral mixing with 
@@ -191,6 +192,48 @@ class optimizer:
             i_star = self.index_branch(v_relaxed)
             self.recursive_DFBB(I_1=(I_1+[i_star]),I_0=I_0,N=N)
             self.recursive_DFBB(I_1=I_1,I_0=(I_0+[i_star]),N=N)
+
+    def greedy_minkowski(self,N):
+        #approximate D-optimal design using Minkowskis Inequality
+        #and a Greedy strategy to drastically reduce the tree search complexity
+        S = len(self.substances)
+
+        self.calculate_Iks()
+        M_sofar = np.zeros((S-1,S-1))
+        indicies = []
+        for k in range(N):
+            index = -1
+            max_det = 0
+            max_trace = 0
+            maxtrace_index = -1
+            prev_rank = 0
+            max_rank_index = -1
+            max_rank_increase = 0
+            for i in range(len(self.FIMs[0,0,:])):
+                det = np.linalg.det(M_sofar + self.FIMs[:,:,i])
+                trace = np.trace(M_sofar  + self.FIMs[:,:,i])
+                rank_increase = np.linalg.matrix_rank(M_sofar + self.FIMs[:,:,i]) - prev_rank
+                if((det > max_det) and i not in indicies):
+                    index = i
+                    max_det = det
+                if((trace > max_trace) and i not in indicies):
+                    maxtrace_index = i
+                    max_trace = trace
+                if((rank_increase > max_rank_increase) and i not in indicies):
+                    max_rank_index = i
+                    max_rank_increase = rank_increase
+            if(index == -1):
+                if(max_rank_index == -1):
+                    index = maxtrace_index
+                else:
+                    index = max_rank_index
+            if(index == -1):
+                print("all measures are zero for k =", k, "picking random sampling point")
+                index = np.random.choice(self.n_sim_freqs)
+            indicies.append(index) #add new frequency to selected sampling points
+            M_sofar = M_sofar + self.FIMs[:,:,index] #add FIM to FIM-sum
+
+        return np.array(indicies), np.linalg.det(M_sofar)
 
 
         

@@ -29,6 +29,7 @@ optimal_solution = opt.find_freqs_brute(3, "D",verbose=True)
 optimal_solution_BD = opt.find_freqs_brute_GBD(3,verbose=True)
 approx_solution_minkowski = opt.find_freqs_minokwski_approx(3)
 BB_solution = opt.find_freqs_DFBB(N=3)
+greedy_solution = opt.greedy_minkowski(N=3)
 grid = optimal_solution[2]
 fvals = optimal_solution[3]
 
@@ -49,6 +50,7 @@ plt.show()
 print(optimal_solution[0:2])
 print(optimal_solution_BD[0:2])
 print(BB_solution)
+print(greedy_solution)
 #print(np.unique(fvals))
 
 

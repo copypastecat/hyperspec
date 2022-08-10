@@ -14,7 +14,7 @@ import pandas as pd
 import time
 
 n_sim_freqs = 60
-N = 2
+N = 3
 
 
 #read in spectral data from dataset
@@ -49,6 +49,12 @@ t_Dopt_stop = time.time()
 t_mink_start = time.time()
 approx_sampling_freqs = this_optimizer.find_freqs_minokwski_approx(N=N)
 t_mink_stop = time.time()
+t_BB_start = time.time()
+BB_solution = this_optimizer.find_freqs_DFBB(N=N)
+t_BB_stop = time.time()
+t_greedy_start = time.time()
+greedy_solution = this_optimizer.greedy_minkowski(N=N)
+t_greedy_stop = time.time()
 #sample from spectra using ideal sensor models (for ground truth)
 sampled_vals_water = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
 sampled_vals_sand = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=standard_sampling_freqs.astype(int))
@@ -62,18 +68,18 @@ sampled_vals_sand_opt = this_ideal_sensor.sample(sand.radiation_pattern,sampling
 sampled_vals_concrete_opt = this_ideal_sensor.sample(concrete.radiation_pattern,samplingpoints=solution.astype(int))
 sampled_vals_chitin_opt = this_ideal_sensor.sample(chitin.radiation_pattern,samplingpoints=solution.astype(int))
 
-sampled_vals_water_approx = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=approx_sampling_freqs.astype(int))
-sampled_vals_sand_approx = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=approx_sampling_freqs.astype(int))
-sampled_vals_concrete_approx = this_ideal_sensor.sample(concrete.radiation_pattern,samplingpoints=approx_sampling_freqs.astype(int))
-sampled_vals_chitin_approx = this_ideal_sensor.sample(chitin.radiation_pattern,samplingpoints=approx_sampling_freqs.astype(int))
+sampled_vals_water_approx = this_ideal_sensor.sample(water.radiation_pattern,samplingpoints=greedy_solution[0].astype(int))
+sampled_vals_sand_approx = this_ideal_sensor.sample(sand.radiation_pattern,samplingpoints=greedy_solution[0].astype(int))
+sampled_vals_concrete_approx = this_ideal_sensor.sample(concrete.radiation_pattern,samplingpoints=greedy_solution[0].astype(int))
+sampled_vals_chitin_approx = this_ideal_sensor.sample(chitin.radiation_pattern,samplingpoints=greedy_solution[0].astype(int))
 
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=opt_freqs)))
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
-coeffs = [0.0,0.0,1.0,0.0]
+coeffs = [0.0,1.0,0.0,0.0]
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2] + coeffs[3]*new_specs[3]
-'''
+#'''
 #sample from mixture with noisy sensor, compute statistics
 #print(new_freqs)
 this_estimator = parameter_estimator(method="cls")
@@ -82,7 +88,7 @@ MSEs_opt=[]
 MSEs_std = []
 MSEs_approx = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,2,0.1))
+    vars = np.flip(np.arange(0.000,4,0.1))
     MSE_opt = []
     MSE_std = []
     MSE_approx = []
@@ -94,7 +100,7 @@ for m in range(avg_n):
        for i in range(1):
            observations_opt.append(this_sensor.sample(mixture,samplingpoints=solution.astype(int)))
            observations_std.append(this_sensor.sample(mixture,standard_sampling_freqs.astype(int)))
-           observations_approx.append(this_sensor.sample(mixture,approx_sampling_freqs.astype(int)))
+           observations_approx.append(this_sensor.sample(mixture,BB_solution[0].astype(int)))
        opt_arr = np.array(observations_opt)
        standard_arr = np.array(observations_std)
        approx_arr = np.array(observations_approx)
@@ -122,35 +128,40 @@ MSEs_opt = np.array(MSEs_opt)
 MSEs_std = np.array(MSEs_std)
 MSEs_approx = np.array(MSEs_approx)
 df_data = np.array([MSEs_opt.mean(axis=0),MSEs_approx.mean(axis=0),MSEs_std.mean(axis=0)]).T
-df = pd.DataFrame(df_data,columns=["optimal","approximate","RGB"])
-df.to_csv("MSEdata_GBD_onlyconcrete.csv")
+df = pd.DataFrame(df_data,columns=["optimal","greedy","RGB"])
+df.to_csv("MSEdata_GBD_halfconcretehalfsand.csv")
 plt.plot(vars,MSEs_opt.mean(axis=0))
 plt.plot(vars,MSEs_std.mean(axis=0))
 plt.plot(vars,MSEs_approx.mean(axis=0))
 plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
-plt.legend(["D-optimal", "RGB", "GBD"])
+plt.legend(["D-optimal", "RGB", "greedy"])
 plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_CLS_err_GBDvsoptvsRGB_onlyconcrete_1000iter.pdf")
+plt.savefig("avg_CLS_err_GreedyvsoptvsRGB_halfsandhalfconcrete_1000iter.pdf")
 plt.show()
-'''
+#'''
 
     
 
-#'''
+'''
 plt.figure()
-plt.plot(new_freqs, new_specs[0],"-bD",markevery=solution.astype(int))
-plt.plot(new_freqs, new_specs[1],"-gD",markevery=solution.astype(int))
-plt.plot(new_freqs, new_specs[2],"-kD",markevery=solution.astype(int))
-plt.plot(new_freqs, new_specs[3],"-rD",markevery=solution.astype(int))
+plt.plot(new_freqs, new_specs[0],"-bD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[1],"-gD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[2],"-kD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[3],"-rD",markevery=greedy_solution[0].astype(int))
 plt.xlabel("$\lambda (\mu m)$")
 plt.ylabel("reflection")
 plt.legend(["water","sand","concrete","layered chitin"])
 plt.show()
-#'''
+'''
 
 print("Time for D-optimal calculation: ", t_Dopt_stop - t_Dopt_start)
 print("Time for calculation of Minkowski approximation: ", t_mink_stop - t_mink_start)
+print("Time for calculation of DFBB solution: ", t_BB_stop - t_BB_start)
+print("Time for calculationn of Greedy solution: ", t_greedy_stop - t_greedy_start)
+print("D_opt solution: ", solution, np.linalg.det(this_optimizer.calculate_FIM(solution)))
+print("Minkowski solution: ", approx_sampling_freqs)
+print("Greedy solution: ", greedy_solution)
 
 '''
 ####
