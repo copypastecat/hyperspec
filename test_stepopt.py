@@ -6,13 +6,13 @@ from classes.parameter_estimator import parameter_estimator
 from classes.optimizer import optimizer
 from classes.sensor import sensor
 
-freqs = np.arange(0,10)
+freqs = np.arange(0,3)
 s1_spec = np.zeros(10)
-s1_spec[1:3] = 1
+s1_spec[0:1] = 1
 s2_spec = np.zeros(10)
-s2_spec[4:6] = 1
+s2_spec[1:2] = 1
 s3_spec = np.zeros(10)
-s3_spec[7:9] = 1
+s3_spec[2:3] = 1
 #if one wants to add the hypothesis: "non of the 3 substances is present"
 s4_spec = np.zeros(10)
 
@@ -23,7 +23,7 @@ s4 = substance("s4", freqs=freqs,  radiation_pattern=s4_spec)
 
 this_sensor = sensor(len(freqs),variances=1)
 
-opt = optimizer(substances=[s1,s2,s3,s4],sensor=this_sensor,n_sim_freqs=len(freqs))
+opt = optimizer(substances=[s1,s2,s3],sensor=this_sensor,n_sim_freqs=len(freqs))
 
 optimal_solution = opt.find_freqs_brute(3, "D",verbose=True)
 optimal_solution_BD = opt.find_freqs_brute_GBD(3,verbose=True)
@@ -46,14 +46,14 @@ plt.show()
 #plot result
 #plt.plot(freqs, s1_spec + s2_spec + s3_spec, '-kD', markevery=approx_solution_minkowski[0].astype(int))
 #plt.show()
-
+#'''
 print(optimal_solution[0:2])
 print(optimal_solution_BD[0:2])
 print(BB_solution)
 print(greedy_solution)
 #print(np.unique(fvals))
+#'''
 
-
-
-
- 
+#print(opt.calculate_FIM([0,0,0]))
+#print(opt.calculate_FIM([0,0,2]))
+#print(opt.calculate_FIM([0,1,2])) 
