@@ -32,5 +32,10 @@ class sensor:
 
         return trunc_index
 
+    def index_to_freq(self,indices):
+        
+        return np.array(indices)*self.delta + self.f_min
+
+
 
         
