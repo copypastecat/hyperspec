@@ -1,0 +1,5 @@
+Mixture coefficients: [0.9, 0.1]
+N runs: 1000
+RGB wavelengths: [0.46502175 0.5300185  0.6300135 ]
+Mikasense wavelengths: [0.47502125 0.560017   0.6700115  0.71500925 0.840003  ]
+Greedy-DETMAX wavelengths: [0.4100245  0.40502475 0.41502425 0.400025   0.420024  ]
