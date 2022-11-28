@@ -35,10 +35,12 @@ class data_handler:
         for sensor in sensor_names:
             this_min = self.sensorwls[sensor].min()
             this_max = self.sensorwls[sensor].max()
+            print("Sensor: ",sensor," with min: ", this_min, " and max: ", this_max)
             if(this_min > min):
                 min = this_min
             if(this_max < max):
                 max = this_max
+            print("overall min: ", min, " overall max: ", max)
         #min_range = np.linspace(min,max,self.nsamplingpoints)
         specs_res = []
         for i, spec in enumerate(specs):

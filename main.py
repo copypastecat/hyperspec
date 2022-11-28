@@ -47,9 +47,6 @@ rgb_sampling_freqs = this_sensor.freq_to_index(np.array([0.465,0.532,0.630])) #R
 t_Dopt_start = time.time()
 #solution = this_optimizer.find_freqs_brute(N=N,criterion="D")
 mikasense_freqs = this_sensor.freq_to_index(np.array([0.475,0.56,0.668,0.717,0.842]))
-#mikasense_freqs = np.array([43,56,76,93,118]) #sampling points of MikaSense RedEdge-MX
-t_Dopt_stop = time.time()
-t_mink_start = time.time()
 #approx_sampling_freqs = this_optimizer.find_freqs_minokwski_approx(N=N)
 t_mink_stop = time.time()
 t_BB_start = time.time()
@@ -86,12 +83,12 @@ mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[
 #sample from mixture with noisy sensor, compute statistics
 #print(new_freqs)
 this_estimator = parameter_estimator(method="cls")
-avg_n = 10000
+avg_n = 10000 #ToDo: now that everything is debugged, check # iterations needed for reaosonable MSE variance!
 MSEs_rgb=[]
 MSEs_mikasense = []
 MSEs_greedy = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,4,0.25))
+    vars = np.flip(np.arange(0.000,4,0.03125*4))
     MSE_rgb = []
     MSE_mikasense = []
     MSE_greedy = []
@@ -110,9 +107,9 @@ for m in range(avg_n):
        mean_rgb = rgb_arr.mean(axis=0)
        mean_mikasense = mikasense_arr.mean(axis=0)
        mean_approx = greedy_arr.mean(axis=0)
-       est_coeffs_rgb = this_estimator.estimate_parameters(np.array([sampled_vals_water_rgb,sampled_vals_sand_rgb,sampled_vals_concrete_rgb,sampled_vals_chitin_rgb]).T,mean_rgb)[0]
-       est_coeffs_mikasense = this_estimator.estimate_parameters(np.array([sampled_vals_water_mikasense,sampled_vals_sand_mikasense,sampled_vals_concrete_mikasense,sampled_vals_chitin_mikasense]).T,mean_mikasense)[0]
-       est_coeffs_approx = this_estimator.estimate_parameters(np.array([sampled_vals_water_greedy,sampled_vals_sand_greedy,sampled_vals_concrete_greedy,sampled_vals_chitin_greedy]).T,mean_approx)[0]
+       est_coeffs_rgb = this_estimator.estimate_parameters(np.array([sampled_vals_water_rgb,sampled_vals_sand_rgb,sampled_vals_concrete_rgb,sampled_vals_chitin_rgb]).T,mean_rgb)
+       est_coeffs_mikasense = this_estimator.estimate_parameters(np.array([sampled_vals_water_mikasense,sampled_vals_sand_mikasense,sampled_vals_concrete_mikasense,sampled_vals_chitin_mikasense]).T,mean_mikasense)
+       est_coeffs_approx = this_estimator.estimate_parameters(np.array([sampled_vals_water_greedy,sampled_vals_sand_greedy,sampled_vals_concrete_greedy,sampled_vals_chitin_greedy]).T,mean_approx)
        sqerr_rgb = (coeffs - est_coeffs_rgb)**2
        sqerr_mikasense = (coeffs - est_coeffs_mikasense)**2
        sqerr_approx = (coeffs - est_coeffs_approx)**2
@@ -126,6 +123,10 @@ for m in range(avg_n):
     sys.stdout.write("\r{0}>".format(m))
     sys.stdout.flush()
 
+print("estimated coefficients RGB: ", est_coeffs_rgb)
+print("estimated coefficients Mikasense: ", est_coeffs_mikasense)
+print("estimated coefficients Greedy: ", est_coeffs_approx)
+
 #compute average estimation error:
 MSEs_rgb = np.array(MSEs_rgb)
 MSEs_mikasense = np.array(MSEs_mikasense)
@@ -133,6 +134,7 @@ MSEs_greedy = np.array(MSEs_greedy)
 df_data = np.array([vars,MSEs_rgb.mean(axis=0),MSEs_greedy.mean(axis=0),MSEs_mikasense.mean(axis=0)]).T
 df = pd.DataFrame(df_data,columns=["x","RGB","Greedy","Mikasense"])
 
+#'''
 #save results:
 path = "./sim/mixture_equal"
 df.to_csv(join(path,"msedata.csv"))
@@ -153,6 +155,7 @@ with open(join(path,"parameters.txt"),'w') as f:
     f.write("Greedy-DETMAX wavelengths: ")
     f.write(str(this_sensor.index_to_freq(greedy_solution[0])))
     f.write('\n')
+#'''
 
 plt.plot(vars,MSEs_rgb.mean(axis=0))
 plt.plot(vars,MSEs_mikasense.mean(axis=0))
@@ -161,40 +164,38 @@ plt.xlabel("$\sigma^2$")
 plt.ylabel("$MSE_{avg}$")
 plt.legend(["RGB", "Mikasense", "greedy"])
 plt.title("Average MSE of estimated coefficients using CLS \n under increasing noise power (concrete, water, sand, chitin)")
-plt.savefig("avg_CLS_err_GreedyvsMikavsRGB_equalmix_5000iter.pdf")
+plt.savefig("avg_CLS_err_GreedyvsMikavsRGB_90water10chitin_10000iter.pdf")
 plt.show()
 #'''
 
     
 
-'''
+#'''
 plt.figure()
-plt.plot(new_freqs, new_specs[0],"-bD",markevery=mikasense_freqs.astype(int))
-plt.plot(new_freqs, new_specs[1],"-gD",markevery=mikasense_freqs.astype(int))
-plt.plot(new_freqs, new_specs[2],"-kD",markevery=mikasense_freqs.astype(int))
-plt.plot(new_freqs, new_specs[3],"-rD",markevery=mikasense_freqs.astype(int))
+plt.plot(new_freqs, new_specs[0],"-bD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[1],"-gD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[2],"-kD",markevery=greedy_solution[0].astype(int))
+plt.plot(new_freqs, new_specs[3],"-rD",markevery=greedy_solution[0].astype(int))
 plt.xlabel("$\lambda (\mu m)$")
 plt.ylabel("reflection")
 plt.legend(["water","sand","concrete","layered chitin"])
 plt.show()
-'''
+#'''
 
 '''
 spec_arr = np.array(new_specs)
 print(spec_arr[:,:,0])
 sp_df = pd.DataFrame(spec_arr[:,:,0].T,columns=["water","sand","concrete","chitin"],index=new_freqs)
 print(sp_df.tail())
-sp_df.to_csv("specs_N3.csv")
+sp_df.to_csv("specs_N5_longer.csv")
 '''
 
-print("Time for D-optimal calculation: ", t_Dopt_stop - t_Dopt_start)
-print("Time for calculation of Minkowski approximation: ", t_mink_stop - t_mink_start)
-print("Time for calculation of DFBB solution: ", t_BB_stop - t_BB_start)
+'''
 print("Time for calculationn of Greedy solution: ", t_greedy_stop - t_greedy_start)
 print("RGB solution: ", rgb_sampling_freqs, np.linalg.det(this_optimizer.calculate_FIM(rgb_sampling_freqs)))
 print("Mikasense solution: ", mikasense_freqs)
 print("Greedy solution: ", greedy_solution)
-
+'''
 '''
 ####
 #image generation (skipped for now...)
