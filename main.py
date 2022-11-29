@@ -77,7 +77,8 @@ sampled_vals_chitin_greedy = this_ideal_sensor.sample(chitin.radiation_pattern,s
 #print(np.linalg.det(this_optimizer.calculate_FIM(sampling_frequencies=[opt_freqs[0]-2,opt_freqs[1]-2,opt_freqs[2]+2])))
 
 #create hypothetical mixture  of ground components
-coeffs = [0.25,0.25,0.25,0.25]
+coeffs = [0,1,0,0]
+singular_position = np.argmax(coeffs)
 mixture = coeffs[0]*new_specs[0] + coeffs[1]*new_specs[1] + coeffs[2]*new_specs[2] + coeffs[3]*new_specs[3]
 #'''
 #sample from mixture with noisy sensor, compute statistics
@@ -87,11 +88,17 @@ avg_n = 10000 #ToDo: now that everything is debugged, check # iterations needed 
 MSEs_rgb=[]
 MSEs_mikasense = []
 MSEs_greedy = []
+Est_probs_approx = []
+Est_probs_mikasense = []
+Est_probs_rgb = []
 for m in range(avg_n):
-    vars = np.flip(np.arange(0.000,4,0.03125*4))
+    vars = np.flip(np.arange(0.000,1.1,0.125))
     MSE_rgb = []
     MSE_mikasense = []
     MSE_greedy = []
+    prob_approx = []
+    prob_mikasense = []
+    prob_rgb = []
     for var in vars:
        this_sensor = sensor(new_freqs[0],new_freqs[-1],n_sim_freqs, variances=var, bias=0)
        observations_rgb = []
@@ -116,28 +123,37 @@ for m in range(avg_n):
        MSE_rgb.append(sqerr_rgb.mean())
        MSE_mikasense.append(sqerr_mikasense.mean())
        MSE_greedy.append(sqerr_approx.mean())
+       prob_approx.append(est_coeffs_approx[singular_position])
+       prob_mikasense.append(est_coeffs_mikasense[singular_position])
+       prob_rgb.append(est_coeffs_rgb[singular_position])
     MSEs_rgb.append(MSE_rgb)
     MSEs_mikasense.append(MSE_mikasense)
     MSEs_greedy.append(MSE_greedy)
+    Est_probs_approx.append(prob_approx)
+    Est_probs_mikasense.append(prob_mikasense)
+    Est_probs_rgb.append(prob_rgb)
     progress = (m/avg_n) * 100
     sys.stdout.write("\r{0}>".format(m))
     sys.stdout.flush()
 
-print("estimated coefficients RGB: ", est_coeffs_rgb)
-print("estimated coefficients Mikasense: ", est_coeffs_mikasense)
-print("estimated coefficients Greedy: ", est_coeffs_approx)
 
 #compute average estimation error:
 MSEs_rgb = np.array(MSEs_rgb)
 MSEs_mikasense = np.array(MSEs_mikasense)
 MSEs_greedy = np.array(MSEs_greedy)
+Est_probs_approx = np.array(Est_probs_approx)
+Est_probs_mikasense = np.array(Est_probs_mikasense)
+Est_probs_rgb = np.array(Est_probs_rgb)
 df_data = np.array([vars,MSEs_rgb.mean(axis=0),MSEs_greedy.mean(axis=0),MSEs_mikasense.mean(axis=0)]).T
 df = pd.DataFrame(df_data,columns=["x","RGB","Greedy","Mikasense"])
+df2_data = np.array([vars,Est_probs_rgb.mean(axis=0),Est_probs_approx.mean(axis=0),Est_probs_mikasense.mean(axis=0)]).T
+df2 = pd.DataFrame(df2_data,columns=["x","RGB","Greedy","Mikasense"])
 
 #'''
 #save results:
-path = "./sim/mixture_equal"
+path = "./sim/singular_sand"
 df.to_csv(join(path,"msedata.csv"))
+df2.to_csv(join(path,"singular_probs.csv"))
 #write parameters to text file:
 with open(join(path,"parameters.txt"),'w') as f:
     f.write("Mixture coefficients: ")
